@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChessFlow | Découvrez votre profil de joueur d'échecs basé sur vos statistiques Chess.com</title>
+
+    <meta name="description" content="Je viens de découvrir mon style de jeu sur ChessFlow. Et vous, quel est votre archétype ?">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: { bg: '#f8fafc', card: '#ffffff', primary: '#6366f1' },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                        'blob': 'blob 15s infinite alternate',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.2)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.8)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
+
+        /* --- SUPPRESSION TOTALE DU FOCUS --- */
+input:focus, button:focus, textarea:focus, select:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    --tw-ring-color: transparent !important;
+    border-color: transparent !important;
+}
+
+/* --- STYLES EXCLUSIFS EASTER EGGS --- */
+
+/* Badge Or (Créateur) */
+.badge-glow-yellow {
+    background-color: #fef3c7 !important; /* Jaune très clair */
+    color: #b45309 !important; /* Texte ambre foncé */
+    border: 1px solid rgba(180, 83, 9, 0.3) !important;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+    animation: pulse-yellow 2s infinite alternate;
+}
+
+/* Badge Orange (Goat) */
+.badge-glow-orange {
+    background-color: #ffedd5 !important; /* Orange très clair */
+    color: #c2410c !important; /* Texte orange foncé */
+    border: 1px solid rgba(194, 65, 12, 0.3) !important;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+    animation: pulse-orange 2s infinite alternate;
+}
+
+/* Badge Bleu (Roc) */
+.badge-glow-blue {
+    background-color: #dbeafe !important; /* Bleu très clair */
+    color: #1d4ed8 !important; /* Texte bleu foncé */
+    border: 1px solid rgba(29, 78, 216, 0.3) !important;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+    animation: pulse-blue 2s infinite alternate;
+}
+
+/* Animations de pulsation lumineuse */
+@keyframes pulse-yellow { from { box-shadow: 0 0 5px rgba(251, 191, 36, 0.3); } to { box-shadow: 0 0 15px rgba(251, 191, 36, 0.6); } }
+@keyframes pulse-orange { from { box-shadow: 0 0 5px rgba(249, 115, 22, 0.3); } to { box-shadow: 0 0 15px rgba(249, 115, 22, 0.6); } }
+@keyframes pulse-blue { from { box-shadow: 0 0 5px rgba(59, 130, 246, 0.3); } to { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6); } }
+
+/* Animation de reflet brillant (Shine) */
+.badge-shine {
+    position: relative;
+    overflow: hidden;
+}
+.badge-shine::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -150%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.6), transparent);
+    transform: rotate(45deg);
+    animation: shine-sweep 3s infinite;
+}
+@keyframes shine-sweep {
+    0% { left: -150%; }
+    100% { left: 150%; }
+}
+
+        /* TEXTURES & BACKGROUNDS */
+        #landingBackground { position: fixed; inset: 0; z-index: -1; transition: opacity 0.8s ease-in-out; }
+        .bg-noise { position: absolute; inset: 0; opacity: 0.04; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); }
+        .color-blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.6; animation: blob 15s infinite alternate; }
+
+        #appBackground { position: fixed; inset: 0; z-index: -2; opacity: 0; transition: opacity 1s ease-in-out; background-color: #f8fafc; }
+        .bg-dot-clean { position: absolute; inset: 0; background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px); background-size: 32px 32px; opacity: 0.6; -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); mask-image: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); }
+
+        /* HERO TITLE */
+        .hero-title { background: linear-gradient(135deg, #4338ca 0%, #a855f7 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.05em; line-height: 0.9; filter: drop-shadow(0 4px 20px rgba(168, 85, 247, 0.2)); }
+
+        /* ANIMATIONS */
+        .quote-container { min-height: 80px; transition: all 0.5s ease-in-out; }
+        .quote-enter { opacity: 0; transform: translateY(20px); }
+        .quote-active { opacity: 1; transform: translateY(0); }
+        .quote-exit { opacity: 0; transform: translateY(-20px); }
+        .falling-piece { position: fixed; font-size: 2.5rem; pointer-events: none; z-index: 50; animation: fall linear forwards; text-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        @keyframes fall { 0% { transform: translateY(-100px) rotate(0deg) scale(0.5); opacity: 0; } 10% { opacity: 1; transform: translateY(0) rotate(45deg) scale(1); } 100% { transform: translateY(110vh) rotate(360deg) scale(1.2); opacity: 0; } }
+
+        /* INPUT DESIGN */
+        .input-wrapper { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
+        .input-wrapper:focus-within { transform: scale(1.02); box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.4); border-color: rgba(99, 102, 241, 0.5); }
+        
+        /* UI CARDS */
+        .card { background: rgba(255, 255, 255, 0.85); border-radius: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.05); border: 1px solid rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.1); }
+
+        /* LOADER */
+        .chess-loader { display: grid; grid-template-columns: repeat(2, 1fr); width: 40px; height: 40px; animation: rotate 2s infinite ease-in-out; }
+        .chess-sq { width: 100%; height: 100%; }
+        .sq-1 { background: #6366f1; border-radius: 4px 0 0 0; }
+        .sq-2 { background: #cbd5e1; border-radius: 0 4px 0 0; }
+        .sq-3 { background: #cbd5e1; border-radius: 0 0 0 4px; }
+        .sq-4 { background: #6366f1; border-radius: 0 0 4px 0; }
+        @keyframes rotate { 0% { transform: rotate(0deg) scale(0.8); } 50% { transform: rotate(180deg) scale(1.2); } 100% { transform: rotate(360deg) scale(0.8); } }
+        
+        /* UTILS */
+        .history-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; width: 100%; height: 48px; }
+        .history-sq { width: 100%; height: 100%; border-radius: 8px; transition: all 0.3s; position: relative; }
+        .history-sq:hover { transform: scale(1.15); z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .history-sq:hover .tooltip { opacity: 1; visibility: visible; transform: translateY(-8px) translateX(-50%); }
+        .flag-icon { width: 24px; height: 18px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .modal-overlay { backdrop-filter: blur(12px); background-color: rgba(15, 23, 42, 0.2); }
+        .footer-link { position: relative; display: inline-block; transition: color 0.3s; }
+        .footer-link:hover { color: #4f46e5; }
+        .toggle-checkbox:checked { right: 0; border-color: transparent; }
+        .toggle-track { transition: all 0.3s ease; }
+        .toggle-thumb { transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input:checked ~ .toggle-thumb { transform: translateX(24px); }
+        .mode-card { cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
+        .mode-card.active-blitz { border-color: #fbbf24; background: #fffbeb; }
+        .mode-card.active-rapid { border-color: #10b981; background: #ecfdf5; }
+
+    </style>
+</head>
+<body class="min-h-screen relative font-sans flex flex-col">
+
+    <div id="landingBackground">
+        <div class="bg-noise"></div>
+        <div class="color-blob w-[500px] h-[500px] bg-indigo-400 top-[-10%] left-[-10%] mix-blend-multiply opacity-40"></div>
+        <div class="color-blob w-[500px] h-[500px] bg-fuchsia-400 bottom-[-10%] right-[-10%] mix-blend-multiply opacity-40 animation-delay-2000"></div>
+        <div class="color-blob w-[400px] h-[400px] bg-sky-300 top-[20%] right-[10%] mix-blend-multiply opacity-40 animation-delay-4000"></div>
+    </div>
+
+    <div id="appBackground">
+        <div class="bg-dot-clean"></div>
+    </div>
+
+    <div id="landingPage" class="fixed inset-0 z-50 flex flex-col items-center justify-center transition-all duration-700">
+        <div class="relative z-20 text-center px-4 w-full max-w-5xl flex flex-col items-center">
+            
+            <h1 class="hero-title text-[5.5rem] md:text-[11rem] font-black mb-8 animate-fade-in-up hover:scale-[1.02] transition-transform duration-700 cursor-default">
+                CHESSFLOW
+            </h1>
+            
+            <div class="w-full max-w-lg mx-auto animate-fade-in-up mb-16 relative" style="animation-delay: 0.1s">
+                <div class="absolute -inset-2 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-pink-500 rounded-full blur-xl opacity-30 animate-pulse-slow"></div>
+                
+                <div class="input-wrapper relative flex items-center bg-white rounded-full shadow-2xl border border-white/60 backdrop-blur-sm">
+                    <div class="pl-8 text-2xl animate-pulse text-indigo-500">⚡</div>
+                    <input id="heroInput" type="text" autocomplete="off" placeholder="Pseudo Chess.com..." 
+                        class="w-full h-16 bg-transparent border-none outline-none ring-0 font-bold text-2xl px-4 text-slate-800 placeholder-slate-400/70"
+                        oninput="spawnPiece(event)"
+                        onkeydown="if(event.key === 'Enter') startFromHero()">
+                    <button onclick="startFromHero()" class="bg-slate-900 text-white h-12 px-8 mr-2 rounded-full font-bold hover:bg-indigo-600 transition-all shadow-lg hover:shadow-indigo-500/50 active:scale-95 uppercase tracking-wide text-sm">
+                        Rechercher
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-4 min-h-[100px] flex items-center justify-center animate-fade-in-up w-full max-w-3xl px-6" style="animation-delay: 0.3s">
+                <div id="quoteDisplay" class="text-center transition-all duration-700 ease-in-out">
+                    </div>
+            </div>
+            
+            <div class="mt-8 text-[10px] font-bold text-slate-400/60 uppercase tracking-[0.3em] animate-fade-in-up" style="animation-delay: 0.4s">
+                CHESSFLOW | Analytics
+            </div>
+        </div>
+    </div>
+
+    <div id="mainContent" class="flex-1 opacity-0 transition-opacity duration-1000 p-4 lg:p-8 flex flex-col hidden min-h-screen">
+        
+        <div class="max-w-7xl mx-auto w-full flex gap-4 mb-6 sticky top-4 z-40">
+            <div class="flex-1 bg-white/80 backdrop-blur-xl shadow-lg shadow-indigo-500/5 rounded-2xl p-2 flex gap-3 border border-white/50 ring-1 ring-white/40">
+                <div class="w-14 h-14 bg-slate-900 rounded-xl flex items-center justify-center text-white font-black text-2xl shadow-xl cursor-pointer hover:rotate-3 transition-transform" onclick="location.reload()">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-tr from-white to-gray-400">CF</span>
+                </div>
+                <input id="searchInput" type="text" autocomplete="off" placeholder="Rechercher un autre joueur..." 
+                    class="flex-1 bg-transparent border-none outline-none font-bold text-xl px-4 text-gray-800 placeholder-gray-400 transition-all focus:placeholder-gray-500"
+                    onkeydown="if(event.key === 'Enter') runScan()">
+                <button onclick="runScan()" class="group bg-indigo-600 text-white px-8 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 overflow-hidden relative hidden md:block">
+                    <span class="relative z-10 text-sm tracking-widest uppercase">Rechercher</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="loader" class="hidden fixed inset-0 bg-white/90 z-[60] flex flex-col items-center justify-center backdrop-blur-md">
+            <div class="chess-loader mb-8">
+                <div class="chess-sq sq-1"></div><div class="chess-sq sq-2"></div>
+                <div class="chess-sq sq-3"></div><div class="chess-sq sq-4"></div>
+            </div>
+            <div class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-fuchsia-600 animate-pulse tracking-tight">ANALYSE...</div>
+            <div id="loaderText" class="mt-4 text-slate-500 text-sm font-bold uppercase tracking-wider">Initialisation</div>
+            <div id="loaderProgress" class="mt-1 text-indigo-500 text-xs font-black">0%</div>
+        </div>
+
+        <main id="dashboard" class="max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 hidden animate-scale-in pb-8">
+            <div class="col-span-12 lg:col-span-8 card p-8 flex flex-col md:flex-row gap-8 items-start relative">
+                <button onclick="openModal('badgeModal')" class="absolute top-6 right-6 text-gray-300 hover:text-indigo-500 transition-colors" title="Infos Badges"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>
+                <div class="flex flex-col items-center shrink-0 mx-auto md:mx-0 w-44">
+                    <div class="relative group z-10">
+                        <div class="absolute -inset-1 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 rounded-[2.2rem] opacity-40 blur group-hover:opacity-60 transition duration-500"></div>
+                        <img id="avatar" src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'" class="relative w-40 h-40 rounded-[2rem] shadow-2xl border-4 border-white object-cover transform group-hover:scale-[1.02] transition duration-500 bg-gray-100">
+                    </div>
+                    <div class="mt-4 w-full space-y-3">
+                        <a id="chessComLink" href="#" target="_blank" class="block w-full py-2.5 text-xs font-bold text-indigo-600 border-2 border-indigo-100 hover:border-indigo-300 rounded-xl text-center transition-all bg-white/80 hover:bg-white hover:shadow-sm">Voir sur Chess.com ↗</a>
+                        <div class="bg-slate-50 rounded-xl p-3 border border-slate-100 flex flex-col items-center justify-center gap-1 group hover:border-slate-200 transition-colors">
+                            <div class="flex items-center gap-2 mb-1"><span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Base de données</span></div>
+                            <div class="flex items-baseline gap-1"><span id="totalAnalyzed" class="text-3xl font-black text-slate-700 leading-none">0</span><span class="text-xs font-bold text-slate-500">parties</span></div>
+                            <div class="mt-1 px-2 py-0.5 bg-white border border-slate-200 rounded-full text-[9px] font-bold text-slate-400 shadow-sm">12 derniers mois</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 w-full text-center md:text-left">
+                    <div class="flex flex-col md:flex-row items-center gap-3 mb-2 justify-center md:justify-start"><h1 id="username" class="text-5xl md:text-6xl font-black text-slate-800 tracking-tight leading-none">---</h1><img id="countryFlag" src="" class="hidden flag-icon" title="Pays"></div>
+                    <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-6" id="badgeContainer"></div>
+                    <div class="grid grid-cols-2 gap-4 mb-8">
+                        <div id="cardBlitz" onclick="switchMode('blitz')" class="mode-card active-blitz p-4 rounded-2xl shadow-sm bg-white/60 group relative overflow-hidden">
+                            <div class="flex justify-between items-start mb-1 relative z-10"><div class="text-[10px] font-bold text-gray-400 uppercase">Blitz Elo</div><div class="text-yellow-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg></div></div><div id="blitzElo" class="text-3xl font-black text-slate-800 relative z-10">---</div>
+                        </div>
+                        <div id="cardRapid" onclick="switchMode('rapid')" class="mode-card p-4 rounded-2xl shadow-sm bg-white/60 group relative overflow-hidden">
+                            <div class="flex justify-between items-start mb-1 relative z-10"><div class="text-[10px] font-bold text-gray-400 uppercase">Rapid Elo</div><div class="text-emerald-500"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg></div></div><div id="rapidElo" class="text-3xl font-black text-slate-800 relative z-10">---</div>
+                        </div>
+                    </div>
+                    <div class="w-full">
+                        <div class="flex justify-between items-end mb-2"><div class="text-[10px] font-bold text-gray-400 uppercase">Forme Actuelle (10 dernières)</div></div>
+                        <div id="lastGamesContainer" class="history-grid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-12 lg:col-span-4 card p-6 flex flex-col items-center justify-center bg-white/80 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-5"><svg class="w-32 h-32" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8 8 8z"/></svg></div>
+                <div class="w-full flex justify-between items-center mb-6 px-2 relative z-10"><h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Performance Globale</h3><span class="text-xs font-bold px-2 py-1 rounded bg-indigo-50 text-indigo-600">WINRATE</span></div>
+                <div class="relative w-56 h-56 flex items-center justify-center">
+                    <canvas id="winrateChart" class="relative z-20"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10"><span id="winratePercent" class="text-5xl font-black text-slate-800 tracking-tighter">--%</span><span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Victoires</span></div>
+                </div>
+                <div class="flex gap-6 mt-6">
+                    <div class="text-center"><div class="w-3 h-3 rounded-full bg-emerald-500 mx-auto mb-1 shadow-lg shadow-emerald-500/30"></div><span class="text-[10px] font-bold text-gray-400 uppercase">Gagnées</span><div id="countWin" class="text-xs font-bold text-emerald-600">0</div></div>
+                    <div class="text-center"><div class="w-3 h-3 rounded-full bg-slate-300 mx-auto mb-1"></div><span class="text-[10px] font-bold text-gray-400 uppercase">Nulles</span><div id="countDraw" class="text-xs font-bold text-slate-500">0</div></div>
+                    <div class="text-center"><div class="w-3 h-3 rounded-full bg-rose-500 mx-auto mb-1 shadow-lg shadow-rose-500/30"></div><span class="text-[10px] font-bold text-gray-400 uppercase">Perdues</span><div id="countLoss" class="text-xs font-bold text-rose-600">0</div></div>
+                </div>
+            </div>
+
+            <div class="col-span-12 md:col-span-4 card p-8 border-t-[6px] border-t-indigo-500 animate-fade-in flex flex-col relative" style="animation-delay: 0.1s">
+                <button onclick="openModal('archetypeModal')" class="absolute top-6 right-6 text-gray-300 hover:text-indigo-500 transition-colors" title="Infos Archétypes"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>
+                <div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-xl">🧬</div><h3 class="font-bold text-gray-900 uppercase text-sm tracking-wide">Archétype</h3></div>
+                <div class="flex-1 flex flex-col justify-center">
+                    <h2 id="archetypeTitle" class="text-4xl font-black text-indigo-900 mb-1 leading-tight tracking-tight">---</h2>
+                    <h4 id="archetypeSub" class="text-sm font-bold text-indigo-500 uppercase tracking-wider mb-4">Analyse du style</h4>
+                    <ul id="archetypeList" class="space-y-2 text-sm text-gray-600 font-medium"><li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-indigo-300"></div>En attente de données...</li></ul>
+                </div>
+            </div>
+
+            <div class="col-span-12 md:col-span-4 card p-0 border-t-[6px] border-t-amber-400 animate-fade-in relative group overflow-hidden flex flex-col" style="animation-delay: 0.2s">
+                <div class="absolute -right-16 -bottom-16 text-amber-50 opacity-40 transform group-hover:scale-105 transition-transform duration-1000 pointer-events-none"><svg class="w-72 h-72" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+                <div class="p-8 h-full flex flex-col justify-between relative z-10">
+                    <div class="flex justify-between items-start"><h3 class="font-bold text-gray-900 uppercase text-lg tracking-tight">Meilleure Victoire</h3><span id="bestWinDate" class="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold rounded-full border border-amber-100">--/--/--</span></div>
+                    <div class="flex-1 flex flex-col justify-center py-6"><div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Contre</div><div onclick="scanBestWinUser()" id="bestWinUser" class="text-4xl font-black text-slate-800 hover:text-amber-500 cursor-pointer transition-colors truncate leading-tight" title="Rechercher ce joueur">---</div></div>
+                    <div class="flex items-end gap-3"><div class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-amber-400 to-amber-600 leading-none" id="bestWinElo">---</div><div class="text-sm font-bold text-amber-500 mb-2">ELO</div></div>
+                </div>
+            </div>
+
+            <div class="col-span-12 md:col-span-4 card p-6 border-t-[6px] border-t-blue-500 flex flex-col justify-between animate-fade-in" style="animation-delay: 0.3s">
+                <div><h3 class="font-bold text-sm text-gray-900 mb-1 text-center uppercase tracking-wide">Flux Circadien</h3><div class="text-[10px] text-gray-400 text-center mb-4">Ligne: Winrate (%) | Barres: Volume</div></div>
+                <div class="relative h-40 w-full"><canvas id="energyChart"></canvas></div>
+                <div class="flex justify-between mt-2 px-4 text-[10px] text-gray-400 uppercase font-bold"><span>Matin</span><span>Midi</span><span>Soir</span><span>Nuit</span></div>
+            </div>
+
+            <div id="cardCauses" class="col-span-12 md:col-span-6 card p-6 border-t-[6px] border-t-emerald-500 animate-fade-in" style="animation-delay: 0.4s">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="font-bold text-gray-900 uppercase text-xs tracking-wide" id="methodTitle">Analyse des Victoires</h3>
+                    <div class="flex items-center"><label for="toggleMethod" class="cursor-pointer relative flex items-center"><input type="checkbox" id="toggleMethod" class="sr-only" onchange="toggleWinLossDisplay()"><div id="toggleTrack" class="w-12 h-7 bg-emerald-100 rounded-full border border-emerald-200 shadow-inner toggle-track"></div><div class="toggle-thumb absolute left-1 top-1 w-5 h-5 bg-white rounded-full shadow-md border border-gray-100 flex items-center justify-center"><div id="toggleDot" class="w-2 h-2 rounded-full bg-emerald-500"></div></div></label><span class="ml-3 text-[10px] font-bold text-gray-400 uppercase">Voir Défaites</span></div>
+                </div>
+                <div class="space-y-6">
+                    <div><div class="flex justify-between text-xs font-bold mb-2 text-gray-600"><span>Échec et Mat</span><span id="pctMat">0%</span></div><div class="h-3 w-full bg-slate-50 rounded-full overflow-hidden shadow-inner"><div id="barMat" class="h-full w-0 transition-all duration-700 rounded-full bg-emerald-500"></div></div></div>
+                    <div><div class="flex justify-between text-xs font-bold mb-2 text-gray-600"><span>Par Abandon</span><span id="pctResign">0%</span></div><div class="h-3 w-full bg-slate-50 rounded-full overflow-hidden shadow-inner"><div id="barResign" class="h-full w-0 transition-all duration-700 rounded-full bg-emerald-400"></div></div></div>
+                    <div><div class="flex justify-between text-xs font-bold mb-2 text-gray-600"><span>Au Temps</span><span id="pctTime">0%</span></div><div class="h-3 w-full bg-slate-50 rounded-full overflow-hidden shadow-inner"><div id="barTime" class="h-full w-0 transition-all duration-700 rounded-full bg-emerald-300"></div></div></div>
+                </div>
+            </div>
+
+            <div class="col-span-12 md:col-span-6 card p-6 border-t-[6px] border-t-fuchsia-500 animate-fade-in" style="animation-delay: 0.5s">
+                <h3 class="font-bold text-gray-900 uppercase text-xs tracking-wide mb-6">Comparatif Hebdomadaire (Winrate %)</h3>
+                <div class="grid grid-cols-11 gap-2 items-center h-40">
+                    <div class="col-span-5 h-full bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 flex flex-col items-center justify-center border border-blue-200 relative overflow-hidden group hover:border-blue-300 transition-all">
+                         <div class="absolute inset-0 bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity"></div><span class="text-2xl mb-1">💼</span><div class="text-[10px] font-bold text-blue-600 uppercase mb-1">Semaine</div><div id="weekWinrate" class="text-3xl font-black text-blue-900 leading-none">0%</div><div id="weekCount" class="text-[9px] text-blue-400 mt-2 font-medium bg-white px-2 py-0.5 rounded-full">0 games</div>
+                    </div>
+                    <div class="col-span-1 flex items-center justify-center z-10 -ml-2 -mr-2"><div class="w-12 h-12 rounded-full bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] flex items-center justify-center font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-fuchsia-400 text-sm border-2 border-white">VS</div></div>
+                    <div class="col-span-5 h-full bg-gradient-to-br from-fuchsia-50 to-pink-50 rounded-2xl p-4 flex flex-col items-center justify-center border border-fuchsia-200 relative overflow-hidden group hover:border-fuchsia-300 transition-all">
+                        <div class="absolute inset-0 bg-fuchsia-500 opacity-0 group-hover:opacity-5 transition-opacity"></div><span class="text-2xl mb-1">🎉</span><div class="text-[10px] font-bold text-fuchsia-600 uppercase mb-1">Week-end</div><div id="weekendWinrate" class="text-3xl font-black text-fuchsia-900 leading-none">0%</div><div id="weekendCount" class="text-[9px] text-fuchsia-400 mt-2 font-medium bg-white px-2 py-0.5 rounded-full">0 games</div>
+                    </div>
+                </div>
+                <div id="weweDiff" class="mt-6 text-center text-sm font-bold text-indigo-900">Analyse en cours...</div>
+            </div>
+
+        </main>
+
+        <footer class="mt-8 mb-4 text-center hidden" id="footer">
+            <div class="inline-flex gap-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-white/50 backdrop-blur-sm px-6 py-2 rounded-full shadow-sm border border-white/60">
+                <span class="cursor-pointer hover:text-indigo-600 transition-colors footer-link" onclick="openModal('legalModal')">Mentions Légales</span>
+                <span class="text-slate-300">|</span>
+                <span class="cursor-pointer hover:text-indigo-600 transition-colors footer-link" onclick="openModal('contactModal')">À Propos / Opportunités</span>
+            </div>
+            <div class="mt-2 text-[9px] text-slate-400 font-medium">CHESSFLOW | Analytics</div>
+        </footer>
+    </div>
+
+    <div id="errorModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300 text-center border-2 border-rose-100">
+            <div class="text-5xl mb-4">🤷‍♂️</div>
+            <h2 class="text-2xl font-black text-slate-800 mb-2">Oups...</h2>
+            <p class="text-gray-500 text-sm mb-6">Le joueur <span class="font-bold text-rose-500" id="errorUsername">---</span> est introuvable sur Chess.com.</p>
+            <button onclick="closeErrorModal()" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors shadow-lg">Compris</button>
+        </div>
+    </div>
+
+    <div id="badgeModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300">
+            <h2 class="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2"><span>🏅</span> Légende des Badges</h2>
+            <div class="space-y-4">
+                <div class="flex items-start gap-3"><span class="text-xl">🦉</span><div><div class="font-bold text-indigo-600 text-sm">Nocturne</div><div class="text-xs text-gray-500">Joue +25% de ses parties la nuit (23h-06h).</div></div></div>
+                <div class="flex items-start gap-3"><span class="text-xl">☕</span><div><div class="font-bold text-amber-600 text-sm">Matinal</div><div class="text-xs text-gray-500">Joue +25% de ses parties le matin (06h-12h).</div></div></div>
+                <div class="flex items-start gap-3"><span class="text-xl">😤</span><div><div class="font-bold text-rose-600 text-sm">Rage Quit ?</div><div class="text-xs text-gray-500">Abandonne plus de 40% de ses défaites.</div></div></div>
+                <div class="flex items-start gap-3"><span class="text-xl">⏳</span><div><div class="font-bold text-gray-600 text-sm">Temps !</div><div class="text-xs text-gray-500">Perd au temps dans plus de 20% des cas.</div></div></div>
+                <div class="flex items-start gap-3"><span class="text-xl">🔥</span><div><div class="font-bold text-fuchsia-600 text-sm">Crusher</div><div class="text-xs text-gray-500">Taux de victoire impressionnant (>55%).</div></div></div>
+                <div class="flex items-start gap-3"><span class="text-xl">🤝</span><div><div class="font-bold text-slate-600 text-sm">Pacifiste</div><div class="text-xs text-gray-500">Fait match nul dans plus de 10% des parties.</div></div></div>
+            </div>
+            <button onclick="closeModal('badgeModal')" class="mt-8 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl transition-colors">Fermer</button>
+        </div>
+    </div>
+
+    <div id="archetypeModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300">
+            <h2 class="text-2xl font-black text-indigo-900 mb-6 flex items-center gap-2"><span>🧬</span> Styles de Jeu</h2>
+            <div class="space-y-4">
+                <div class="p-3 bg-indigo-50 rounded-xl border border-indigo-200"><div class="font-black text-indigo-700 text-sm mb-1">DOMINANT</div><p class="text-xs text-indigo-900/70">Winrate > 58%. Le joueur surclasse ses adversaires et impose son rythme.</p></div>
+                <div class="p-3 bg-rose-50 rounded-xl border border-rose-200"><div class="font-black text-rose-700 text-sm mb-1">RISQUE-TOUT</div><p class="text-xs text-rose-900/70">Plus de défaites que de victoires, mais très peu de nulles. Joue pour le mat à tout prix.</p></div>
+                <div class="p-3 bg-slate-100 rounded-xl border border-slate-300"><div class="font-black text-slate-700 text-sm mb-1">FORTERESSE</div><p class="text-xs text-slate-600">Beaucoup de matchs nuls (>15%). Un joueur solide, difficile à battre mais prudent.</p></div>
+                <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200"><div class="font-black text-emerald-700 text-sm mb-1">ÉQUILIBRÉ</div><p class="text-xs text-emerald-900/70">Le style standard. Capable d'attaquer et de défendre selon la situation.</p></div>
+            </div>
+            <button onclick="closeModal('archetypeModal')" class="mt-8 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl transition-colors">Compris</button>
+        </div>
+    </div>
+
+    <div id="legalModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300">
+            <h2 class="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2"><span>⚖️</span> Mentions Légales</h2>
+            <div class="space-y-4 text-sm text-gray-600">
+                <div><h3 class="font-bold text-gray-900">Données</h3><p>Ce site n'est pas affilié à Chess.com. Il utilise l'API publique (v1). Aucune donnée personnelle n'est conservée ; tout le traitement se fait en temps réel.</p></div>
+                <div><h3 class="font-bold text-gray-900">Cookies</h3><p>Nous n'utilisons aucun cookie publicitaire ou de traçage. Juste du fun.</p></div>
+                <div><h3 class="font-bold text-gray-900">Responsabilité</h3><p>Les statistiques sont fournies à titre indicatif. L'auteur décline toute responsabilité en cas d'erreur de calcul ou d'API indisponible.</p></div>
+            </div>
+            <button onclick="closeModal('legalModal')" class="mt-8 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3 rounded-xl transition-colors">Fermer</button>
+        </div>
+    </div>
+
+    <div id="contactModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center modal-overlay opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-lg w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300 text-center">
+            <div class="text-4xl mb-4">🚀</div>
+            <h2 class="text-2xl font-black text-slate-800 mb-2">Opportunités & Crédits</h2>
+            <p class="text-gray-500 text-sm mb-6">ChessFlow est un projet personnel créé pour explorer les échecs de manière plus visuelle. Je ne suis pas un grand maître, juste un passionné qui aime construire des outils sympas. Si vous avez des idées ou simplement envie de discuter du projet, n'hésitez pas à me contacter !</p>
+            <a href="https://www.chess.com/member/Lilianrvi" target="_blank" class="block w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors">Mon Profil Chess.com (Lilianrvi)</a>
+            <button onclick="closeModal('contactModal')" class="mt-6 text-xs text-gray-400 font-bold hover:text-gray-600 underline">Retour</button>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'blitz';
+        let winrateChartInstance = null;
+        let energyChartInstance = null;
+        let globalStats = null;
+        const pieces = ['♔', '♕', '♖', '♗', '♘', '♙'];
+        const colors = ['#4f46e5', '#9333ea', '#db2777', '#10b981', '#f59e0b', '#0f172a'];
+        
+        const quotes = [
+            { t: "Les échecs sont une lutte contre l'erreur.", a: "Johannes Zukertort" },
+            { t: "La tactique, c'est ce que vous faites quand il y a quelque chose à faire.", a: "Tartakower" },
+            { t: "Je ne crois pas en la psychologie. Je crois aux bons coups.", a: "Bobby Fischer" },
+            { t: "Personne n'a jamais gagné une partie en abandonnant.", a: "Tartakower" },
+            { t: "La menace est plus forte que l'exécution.", a: "Nimzowitsch" },
+            { t: "Les échecs, c'est la vie en miniature.", a: "Garry Kasparov" },
+            { t: "Jouez l'ouverture comme un livre et la finale comme une machine.", a: "Spielmann" }
+        ];
+
+        // --- EASTER EGG BADGES ---
+        const specialBadges = {
+    'lilianrvi': { 
+        text: "CRÉATEUR", 
+        color: "badge-glow-yellow badge-shine", 
+        icon: "👑" 
+    },
+    'leo_lnrd': { 
+        text: "FUTUR GOAT", 
+        color: "badge-glow-orange badge-shine", 
+        icon: "🐐" 
+    },
+    'mathdch': { 
+        text: "ROC SOLIDE", 
+        color: "badge-glow-blue badge-shine", 
+        icon: "🗿" 
+    }
+};
+
+        // --- QUOTES ANIMATION ---
+        let quoteIdx = 0;
+        function rotateQuotes() {
+            const display = document.getElementById('quoteDisplay');
+            display.classList.remove('quote-active');
+            display.classList.add('quote-exit');
+            setTimeout(() => {
+                const q = quotes[quoteIdx];
+                display.innerHTML = `
+                    <div class="text-xl md:text-2xl text-slate-600 font-medium leading-relaxed drop-shadow-sm">"${q.t}"</div>
+                    <div class="mt-3 text-xs font-black text-indigo-500 uppercase tracking-widest">— ${q.a}</div>
+                `;
+                display.classList.remove('quote-exit');
+                display.classList.add('quote-enter');
+                setTimeout(() => {
+                    display.classList.remove('quote-enter');
+                    display.classList.add('quote-active');
+                }, 50);
+                quoteIdx = (quoteIdx + 1) % quotes.length;
+            }, 500);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            rotateQuotes();
+            setInterval(rotateQuotes, 5000);
+        });
+
+        // --- FALLING PIECES ---
+        function spawnPiece(e) {
+            const piece = document.createElement('div');
+            piece.innerText = pieces[Math.floor(Math.random() * pieces.length)];
+            piece.className = 'falling-piece';
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.color = color;
+            piece.style.left = Math.random() * 95 + 'vw';
+            piece.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            piece.style.fontSize = (Math.random() * 2 + 1.5) + 'rem';
+            document.body.appendChild(piece);
+            setTimeout(() => { piece.remove(); }, 4000);
+        }
+
+        // --- MODALS ---
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            const content = modal.querySelector('div');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            const content = modal.querySelector('div');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+        function closeErrorModal() {
+            closeModal('errorModal');
+            toggleLoader(false);
+            const landing = document.getElementById('landingPage');
+            landing.style.transform = 'scale(1)';
+            landing.style.opacity = '1';
+            landing.style.pointerEvents = 'auto';
+            document.getElementById('landingBackground').style.opacity = '1';
+            document.getElementById('appBackground').style.opacity = '0';
+            document.getElementById('mainContent').classList.add('hidden');
+            document.getElementById('footer').classList.add('hidden');
+            location.reload();
+        }
+
+        // --- CORE LOGIC (FIXED) ---
+        function startFromHero() {
+    const val = document.getElementById('heroInput').value.trim();
+    if(!val) return;
+
+    // 1. On synchronise l'input de recherche du dashboard
+    document.getElementById('searchInput').value = val;
+
+    // 2. On cache la landing page et on prépare le fond
+    document.getElementById('landingPage').style.opacity = '0';
+    document.getElementById('landingBackground').style.opacity = '0';
+
+    setTimeout(() => {
+        document.getElementById('landingPage').classList.add('hidden');
+        document.getElementById('appBackground').style.opacity = '1';
+        
+        const main = document.getElementById('mainContent');
+        main.classList.remove('hidden');
+        setTimeout(() => main.style.opacity = '1', 50);
+
+        // --- CORRECTION ICI : On affiche le loader AVANT de lancer le scan ---
+        document.getElementById('loader').classList.remove('hidden');
+
+        // 3. On lance le scan
+        runScan();
+    }, 700);
+}
+
+        function toggleLoader(show, text = "", progress = "") {
+            const loader = document.getElementById('loader');
+            if (show) {
+                loader.classList.remove('hidden');
+                if (text) document.getElementById('loaderText').innerText = text;
+                if (progress) document.getElementById('loaderProgress').innerText = progress;
+            } else {
+                loader.classList.add('hidden');
+            }
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-card').forEach(c => {
+                c.classList.remove('active-blitz', 'active-rapid', 'opacity-50');
+                if(c.id === `card${mode.charAt(0).toUpperCase() + mode.slice(1)}`) {
+                    c.classList.add(mode === 'blitz' ? 'active-blitz' : 'active-rapid');
+                } else {
+                    c.classList.add('opacity-50');
+                }
+            });
+            if(document.getElementById('username').innerText !== '---') runScan();
+        }
+
+        function scanBestWinUser() {
+            const user = document.getElementById('bestWinUser').innerText;
+            if(user && user !== '---') {
+                document.getElementById('searchInput').value = user;
+                runScan();
+            }
+        }
+
+        async function runScan() {
+    const userInput = document.getElementById('searchInput').value.trim();
+    
+    // 1. GESTION DES ESPACES ET CARACTÈRES SPÉCIAUX
+    // On vérifie si le pseudo est vide ou contient des espaces (interdits par Chess.com)
+    if (!userInput || userInput.includes(' ')) {
+        document.getElementById('errorUsername').innerText = userInput || "Inconnu";
+        openModal('errorModal');
+        return;
+    }
+
+    // On s'assure que le loader est visible
+    toggleLoader(true, "Connexion à Chess.com...", "0%");
+    document.getElementById('dashboard').classList.add('hidden');
+
+    try {
+        // encodeURIComponent permet de gérer proprement les caractères spéciaux dans l'URL
+        const username = encodeURIComponent(userInput);
+        
+        const profileRes = await fetch(`https://api.chess.com/pub/player/${username}`);
+        
+        if (!profileRes.ok) {
+            // Si le joueur n'est pas trouvé (404)
+            toggleLoader(false);
+            document.getElementById('errorUsername').innerText = userInput;
+            openModal('errorModal');
+            return; 
+        }
+        
+        const profile = await profileRes.json();
+        
+        const statsRes = await fetch(`https://api.chess.com/pub/player/${username}/stats`);
+        const stats = await statsRes.json();
+
+        if(profile.country) {
+            const countryRes = await fetch(profile.country);
+            const countryData = await countryRes.json();
+            const flagImg = document.getElementById('countryFlag');
+            if(countryData.code) {
+                flagImg.src = `https://flagcdn.com/h40/${countryData.code.toLowerCase()}.png`;
+                flagImg.classList.remove('hidden');
+            }
+        }
+
+        toggleLoader(true, "Récupération des archives...", "10%");
+        const archivesRes = await fetch(`https://api.chess.com/pub/player/${username}/games/archives`);
+        const archivesData = await archivesRes.json();
+        
+        const archivesToFetch = archivesData.archives.slice(-12).reverse();
+        let allGames = [];
+        
+        for (let i = 0; i < archivesToFetch.length; i++) {
+            const url = archivesToFetch[i];
+            const pct = Math.round(((i + 1) / archivesToFetch.length) * 80) + 10;
+            toggleLoader(true, `Analyse du mois ${i+1}/${archivesToFetch.length}...`, `${pct}%`);
+            const gamesRes = await fetch(url);
+            const gamesData = await gamesRes.json();
+            allGames = allGames.concat(gamesData.games);
+        }
+
+        toggleLoader(true, "Traitement des données...", "95%");
+        
+        allGames.sort((a, b) => b.end_time - a.end_time);
+        const filteredGames = allGames.filter(g => g.time_class === currentMode && g.rules === 'chess');
+        const gamesToAnalyze = filteredGames.slice(0, 1000); 
+
+        processData(profile, stats, gamesToAnalyze);
+        toggleLoader(false);
+        document.getElementById('mainContent').classList.remove('hidden');
+        setTimeout(() => document.getElementById('mainContent').classList.remove('opacity-0'), 50);
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('footer').classList.remove('hidden');
+
+    } catch (error) {
+        // 2. REMPLACEMENT DE L'ALERT PAR LE MODAL EN CAS D'ERREUR TECHNIQUE
+        console.error(error);
+        toggleLoader(false);
+        
+        document.getElementById('errorUsername').innerText = userInput;
+        openModal('errorModal');
+        // On ne met plus d'alert() ici pour éviter le pop-up navigateur
+    }
+}
+
+// 3. FONCTION DE FERMETURE (À mettre à jour également)
+function closeError() {
+    // Cache le modal
+    document.getElementById('errorModal').classList.add('hidden');
+    // Renvoie à l'accueil proprement
+    location.reload();
+}
+
+        function processData(profile, stats, games) {
+            document.getElementById('username').innerText = profile.username;
+            const defaultAvatar = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png';
+            document.getElementById('avatar').src = profile.avatar || defaultAvatar;
+            document.getElementById('chessComLink').href = profile.url;
+
+            document.getElementById('blitzElo').innerText = stats.chess_blitz?.last?.rating || 'N/A';
+            document.getElementById('rapidElo').innerText = stats.chess_rapid?.last?.rating || 'N/A';
+            document.getElementById('totalAnalyzed').innerText = games.length;
+
+            let w=0, l=0, d=0;
+            let bestWin = { elo: 0, user: '---', date: '-' };
+            let energyStats = { m: {w:0, t:0}, a: {w:0, t:0}, e: {w:0, t:0}, n: {w:0, t:0} };
+            let winMethods = { mat:0, resign:0, time:0, total:0 };
+            let lossMethods = { mat:0, resign:0, time:0, total:0 };
+            let week = { w:0, t:0 }, weekend = { w:0, t:0 };
+
+            games.forEach(g => {
+                const isWhite = g.white.username.toLowerCase() === profile.username.toLowerCase();
+                const me = isWhite ? g.white : g.black;
+                const opp = isWhite ? g.black : g.white;
+                const result = me.result;
+
+                if (result === 'win') {
+                    w++;
+                    if (opp.rating > bestWin.elo) {
+                        bestWin = { elo: opp.rating, user: opp.username, date: new Date(g.end_time * 1000).toLocaleDateString() };
+                    }
+                    winMethods.total++;
+                    if(opp.result === 'checkmated' || (g.pgn && g.pgn.includes("won by checkmate"))) winMethods.mat++;
+                    else if(opp.result === 'timeout') winMethods.time++;
+                    else winMethods.resign++;
+
+                } else if (['agreed', 'repetition', 'stalemate', 'insufficient', '50move'].includes(result)) {
+                    d++;
+                } else {
+                    l++;
+                    lossMethods.total++;
+                    if(result === 'checkmated') lossMethods.mat++;
+                    else if(result === 'timeout') lossMethods.time++;
+                    else lossMethods.resign++;
+                }
+
+                const date = new Date(g.end_time * 1000);
+                const h = date.getHours();
+                const day = date.getDay(); 
+
+                let p = 'n';
+                if (h >= 6 && h < 12) p = 'm';
+                else if (h >= 12 && h < 18) p = 'a';
+                else if (h >= 18 && h < 23) p = 'e';
+
+                energyStats[p].t++;
+                if (result === 'win') energyStats[p].w++;
+
+                if(day === 0 || day === 6) { weekend.t++; if(result === 'win') weekend.w++; }
+                else { week.t++; if(result === 'win') week.w++; }
+            });
+
+            globalStats = { winMethods, lossMethods };
+
+            document.getElementById('countWin').innerText = w;
+            document.getElementById('countLoss').innerText = l;
+            document.getElementById('countDraw').innerText = d;
+            
+            document.getElementById('bestWinUser').innerText = bestWin.user;
+            document.getElementById('bestWinElo').innerText = bestWin.elo;
+            document.getElementById('bestWinDate').innerText = bestWin.date;
+
+            const historyContainer = document.getElementById('lastGamesContainer');
+            historyContainer.innerHTML = '';
+            games.slice(0, 10).forEach(g => {
+                const isWhite = g.white.username.toLowerCase() === profile.username.toLowerCase();
+                const me = isWhite ? g.white : g.black;
+                const opp = isWhite ? g.black : g.white;
+                let colorClass = 'bg-slate-300';
+                if(me.result === 'win') colorClass = 'bg-emerald-400';
+                else if(!['agreed','repetition','stalemate'].includes(me.result)) colorClass = 'bg-rose-400';
+
+                const sq = document.createElement('div');
+                sq.className = `${colorClass} history-sq cursor-help`;
+                sq.innerHTML = `<div class="tooltip opacity-0 invisible absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-28 bg-slate-900 text-white text-[10px] p-2 rounded-lg z-20 text-center pointer-events-none transition-all shadow-xl border border-white/10"><div class="font-bold truncate text-indigo-300">${opp.username}</div><div class="mb-1">${opp.rating} Elo</div><div class="text-[8px] text-gray-400">${new Date(g.end_time*1000).toLocaleDateString()}</div></div>`;
+                historyContainer.appendChild(sq);
+            });
+
+            const badgeContainer = document.getElementById('badgeContainer');
+            badgeContainer.innerHTML = '';
+            const addBadge = (txt, color, icon) => { badgeContainer.innerHTML += `<span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${color} flex items-center gap-1 border border-black/5 shadow-sm transform hover:scale-105 transition">${icon} ${txt}</span>`; };
+            
+            // --- INJECTION DES BADGES SPÉCIAUX ---
+            const lowerUser = profile.username.toLowerCase();
+            if(specialBadges[lowerUser]) {
+                const sb = specialBadges[lowerUser];
+                addBadge(sb.text, sb.color, sb.icon);
+            }
+
+            if(energyStats.n.t > (games.length * 0.25)) addBadge("Nocturne", "bg-indigo-50 text-indigo-700", "🦉");
+            if(energyStats.m.t > (games.length * 0.25)) addBadge("Matinal", "bg-amber-50 text-amber-700", "☕");
+            if(lossMethods.resign > (lossMethods.total * 0.4)) addBadge("Rage Quit ?", "bg-rose-50 text-rose-700", "😤");
+            if(lossMethods.time > (lossMethods.total * 0.2)) addBadge("Temps !", "bg-gray-100 text-gray-700", "⏳");
+            if(w/games.length > 0.55) addBadge("Crusher", "bg-fuchsia-50 text-fuchsia-700", "🔥");
+            if(d > games.length * 0.1) addBadge("Pacifiste", "bg-slate-100 text-slate-600", "🤝");
+
+            const total = w + l + d || 1;
+            const wr = w / total;
+            let aTitle="Équilibré", aSub="Polyvalence Tactique", aList=[];
+            
+            if(wr > 0.58) { aTitle="Dominant"; aSub="Maîtrise Totale"; aList = ["Convertit ses avantages", "Pression constante", "Peu de contres"]; }
+            else if(l > w && d < total*0.1) { aTitle="Risque-Tout"; aSub="Style Agressif"; aList = ["Joue pour le mat", "Déteste la nulle", "Ouvertures tranchantes"]; }
+            else if(d > total*0.15) { aTitle="Forteresse"; aSub="Défense de fer"; aList = ["Difficile à percer", "Patiente en finale", "Solide psychologiquement"]; }
+            else { aList = ["S'adapte à l'adversaire", "Gestion du temps stable", "Jeu varié"]; }
+
+            document.getElementById('archetypeTitle').innerText = aTitle;
+            document.getElementById('archetypeSub').innerText = aSub;
+            const listEl = document.getElementById('archetypeList');
+            listEl.innerHTML = '';
+            aList.forEach(item => { listEl.innerHTML += `<li class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>${item}</li>`; });
+
+            updateWinrateChart(w, l, d);
+            updateEnergyChart(energyStats);
+            updateMethodBars(winMethods, false);
+            updateWeekWeekend(week, weekend);
+        }
+
+        function updateWinrateChart(w, l, d) {
+            const total = w + l + d;
+            const winPct = total > 0 ? ((w / total) * 100).toFixed(0) : 0;
+            document.getElementById('winratePercent').innerText = winPct + "%";
+            
+            const ctx = document.getElementById('winrateChart').getContext('2d');
+            if (winrateChartInstance) winrateChartInstance.destroy();
+            winrateChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: ['G', 'P', 'N'], datasets: [{ data: [w, l, d], backgroundColor: ['#10b981', '#f43f5e', '#cbd5e1'], borderWidth: 0, cutout: '85%' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function updateEnergyChart(stats) {
+            const ctx = document.getElementById('energyChart').getContext('2d');
+            if (energyChartInstance) energyChartInstance.destroy();
+
+            const labels = ['Matin', 'Midi', 'Soir', 'Nuit'];
+            const keys = ['m', 'a', 'e', 'n'];
+            const rates = keys.map(k => stats[k].t > 0 ? (stats[k].w / stats[k].t * 100) : 0);
+            const volumes = keys.map(k => stats[k].t);
+
+            energyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { type: 'line', label: 'Winrate %', data: rates, borderColor: '#6366f1', borderWidth: 3, pointBackgroundColor: '#fff', pointBorderColor: '#6366f1', pointRadius: 5, tension: 0.4, yAxisID: 'y' },
+                        { type: 'bar', label: 'Volume', data: volumes, backgroundColor: 'rgba(99, 102, 241, 0.1)', borderRadius: 6, barThickness: 20, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: {size: 10} } } },
+                    scales: { x: { grid: { display: false } }, y: { display: true, position:'left', min: 0, max: 100, grid: { borderDash: [5, 5] } }, y1: { display: true, position:'right', grid: { display: false } } }
+                }
+            });
+        }
+
+        function toggleWinLossDisplay() {
+            const isChecked = document.getElementById('toggleMethod').checked;
+            document.getElementById('methodTitle').innerText = isChecked ? "Causes des Défaites" : "Analyse des Victoires";
+            const card = document.getElementById('cardCauses');
+            const track = document.getElementById('toggleTrack');
+            const dot = document.getElementById('toggleDot');
+            
+            if(isChecked) {
+                card.classList.remove('border-t-emerald-500'); card.classList.add('border-t-rose-500');
+                track.classList.remove('bg-emerald-100', 'border-emerald-200'); track.classList.add('bg-rose-100', 'border-rose-200');
+                dot.classList.remove('bg-emerald-500'); dot.classList.add('bg-rose-500');
+            } else {
+                card.classList.remove('border-t-rose-500'); card.classList.add('border-t-emerald-500');
+                track.classList.remove('bg-rose-100', 'border-rose-200'); track.classList.add('bg-emerald-100', 'border-emerald-200');
+                dot.classList.remove('bg-rose-500'); dot.classList.add('bg-emerald-500');
+            }
+            updateMethodBars(isChecked ? globalStats.lossMethods : globalStats.winMethods, isChecked);
+        }
+
+        function updateMethodBars(data, isLoss) {
+            const total = data.total || 1;
+            const pMat = Math.round(data.mat / total * 100);
+            const pRes = Math.round(data.resign / total * 100);
+            const pTime = Math.round(data.time / total * 100);
+
+            document.getElementById('pctMat').innerText = pMat + "%";
+            document.getElementById('pctResign').innerText = pRes + "%";
+            document.getElementById('pctTime').innerText = pTime + "%";
+
+            const cMat = isLoss ? 'bg-rose-600' : 'bg-emerald-500';
+            const cRes = isLoss ? 'bg-rose-500' : 'bg-emerald-400';
+            const cTime = isLoss ? 'bg-rose-400' : 'bg-emerald-300';
+            
+            const hexMat = isLoss ? '#e11d48' : '#10b981';
+            const hexRes = isLoss ? '#f43f5e' : '#34d399';
+            const hexTime = isLoss ? '#fb7185' : '#6ee7b7';
+
+            const bars = [{ id: 'barMat', pct: pMat, col: cMat, hex: hexMat }, { id: 'barResign', pct: pRes, col: cRes, hex: hexRes }, { id: 'barTime', pct: pTime, col: cTime, hex: hexTime }];
+
+            bars.forEach(b => {
+               const el = document.getElementById(b.id);
+               el.className = `h-full w-0 transition-all duration-700 rounded-full ${b.col}`;
+               el.style.boxShadow = `0 0 ${b.pct/4}px ${b.hex}`; 
+            });
+
+            setTimeout(() => {
+                document.getElementById('barMat').style.width = pMat + "%";
+                document.getElementById('barResign').style.width = pRes + "%";
+                document.getElementById('barTime').style.width = pTime + "%";
+            }, 100);
+        }
+
+        function updateWeekWeekend(week, weekend) {
+            const wrWeek = week.t > 0 ? Math.round(week.w/week.t*100) : 0;
+            const wrEnd = weekend.t > 0 ? Math.round(weekend.w/weekend.t*100) : 0;
+
+            document.getElementById('weekWinrate').innerText = wrWeek + "%";
+            document.getElementById('weekendWinrate').innerText = wrEnd + "%";
+            document.getElementById('weekCount').innerText = week.t + " parties";
+            document.getElementById('weekendCount').innerText = weekend.t + " parties";
+
+            const diff = wrEnd - wrWeek;
+            let msg = "Performance identique.";
+            if(diff > 0) msg = `🔥 Vous êtes +${diff}% meilleur le Week-end.`;
+            if(diff < 0) msg = `💼 Vous êtes +${Math.abs(diff)}% meilleur en Semaine.`;
+            document.getElementById('weweDiff').innerText = msg;
+        }
+    </script>
+</body>
+</html>
