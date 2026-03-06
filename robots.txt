@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://diko.lirvenlabs.com/sitemap.xml
+
+Sitemap: https://chessflow.lirvenlabs.com/sitemap.xml
